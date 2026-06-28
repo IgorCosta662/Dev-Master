@@ -1,4 +1,4 @@
-export type DifficultyLevel = "iniciante" | "intermediario" | "avancado";
+export type DifficultyLevel = "iniciante" | "intermediario" | "avancado" | "super_avancado";
 
 export interface Lesson {
   id: string;

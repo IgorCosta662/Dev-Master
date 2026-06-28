@@ -295,7 +295,7 @@ class Veiculo {
   }
 
   exibirDetalhes() {
-    return `Veículo: ${this.marca} ${this.modelo}`;
+    return \`Veículo: \${this.marca} \${this.modelo}\`;
   }
 }
 \`\`\`
@@ -312,7 +312,7 @@ class Carro extends Veiculo {
   }
 
   buzinar() {
-    return `O ${this.modelo} está buzinando: Bi-bi!`;
+    return \`O \${this.modelo} está buzinando: Bi-bi!\`;
   }
 }
 
@@ -1773,7 +1773,14 @@ WHERE categoria = 'Eletrônicos';
 int main() {
     std::string nome = "Estudante";
     std::cout << "Olá, Mundo!" << std::endl;
-    std::cout << "Ol�    lessons: [
+    std::cout << "Olá, estudante! Pronto para aprender?" << std::endl;
+    return 0;
+}
+`,
+        description: "Estrutura básica de um código em C++."
+      }
+    ],
+    lessons: [
       {
         id: "cpp-l1",
         title: "1. Estrutura de um Programa C++ e Entrada/Saída",
@@ -2159,23 +2166,6 @@ int main() {
         ],
         correctAnswerIndex: 1,
         explanation: "Templates permitem definir lógicas genéricas de código onde o tipo de dado em si é parametrizado."
-      }
-    ]n: "Qual o ponto de entrada obrigatório de execução para qualquer aplicativo compilável em C++?",
-        options: ["void run()", "int main()", "class Application", "#include <main>"],
-        correctAnswerIndex: 1,
-        explanation: "A função 'int main()' é identificada pelo compilador C++ como o início da pilha de chamadas e execução."
-      },
-      {
-        id: "cpp-q2",
-        question: "Se temos 'int x = 10; int* p = &x;', o que a expressão '*p' representa?",
-        options: [
-          "O endereço de memória da variável x",
-          "O valor atual da variável x (10)",
-          "A criação de uma nova variável int",
-          "Uma operação de multiplicação por p"
-        ],
-        correctAnswerIndex: 1,
-        explanation: "O operador de desreferenciação '*' na frente do ponteiro extrai o valor real armazenado na célula de memória apontada."
       }
     ]
   }

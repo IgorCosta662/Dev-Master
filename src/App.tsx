@@ -64,6 +64,55 @@ import {
   DifficultyLevel
 } from "./types";
 
+const allCatalogueLanguages: LibraryLanguage[] = [
+  {
+    id: "javascript",
+    name: "JavaScript",
+    description: "A linguagem que move a web. Essencial para criar páginas web interativas, servidores, aplicativos móveis e muito mais.",
+    category: "frontend",
+    iconName: "FileJson",
+    color: "amber",
+    bgGradient: "from-amber-400 to-yellow-500"
+  },
+  {
+    id: "python",
+    name: "Python",
+    description: "Conhecida por sua sintaxe limpa, amigável e legibilidade. Excelente para iniciantes, ciência de dados, IA, automações e backend.",
+    category: "dados",
+    iconName: "Terminal",
+    color: "sky",
+    bgGradient: "from-sky-400 to-blue-500"
+  },
+  {
+    id: "html-css",
+    name: "HTML & CSS",
+    description: "A base visual e estrutural de toda a web. Aprenda a estruturar páginas semânticas com HTML5 e estilizá-las de forma responsiva com CSS3.",
+    category: "frontend",
+    iconName: "Palette",
+    color: "orange",
+    bgGradient: "from-orange-400 to-red-500"
+  },
+  {
+    id: "sql",
+    name: "SQL",
+    description: "Linguagem estruturada para interagir com bancos de dados relacionais. Aprenda a consultar, filtrar, agrupar e juntar dados de forma eficiente.",
+    category: "dados",
+    iconName: "Database",
+    color: "teal",
+    bgGradient: "from-teal-400 to-emerald-500"
+  },
+  {
+    id: "cpp",
+    name: "C++",
+    description: "Linguagem compilada de altíssimo desempenho e controle de memória. Essencial para desenvolvimento de sistemas, engines de jogos e navegadores.",
+    category: "sistemas",
+    iconName: "Cpu",
+    color: "indigo",
+    bgGradient: "from-indigo-400 to-purple-600"
+  },
+  ...libraryLanguages
+];
+
 // Dynamic Lucide Icon Mapper
 const IconMapper: React.FC<{ name: string; className?: string }> = ({ name, className }) => {
   switch (name) {
@@ -377,7 +426,7 @@ export default function App() {
   const [generatingLanguageName, setGeneratingLanguageName] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [generationDepth, setGenerationDepth] = useState<"padrao" | "super_completa">("super_completa");
+  const [generationDepth, setGenerationDepth] = useState<"padrao" | "super_completa" | "mestre_20">("super_completa");
 
   // Load Saved Snippets & Progress on Mount
   useEffect(() => {
@@ -454,7 +503,7 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
     setQuizSubmitted(false);
   };
 
-  const handleGenerateLanguage = async (libLang: LibraryLanguage, forceDepth?: "padrao" | "super_completa") => {
+  const handleGenerateLanguage = async (libLang: LibraryLanguage, forceDepth?: "padrao" | "super_completa" | "mestre_20") => {
     const targetDepth = forceDepth || generationDepth;
     
     // Check if we already loaded/generated this language
@@ -463,7 +512,8 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
     // If it exists and already has the correct size, and we aren't forcing an upgrade/regen, just load it
     const existingLessonCount = existing?.lessons?.length || 0;
     const isTargetSuper = targetDepth === "super_completa";
-    const expectedLessonCount = isTargetSuper ? 6 : 3;
+    const isTargetMestre = targetDepth === "mestre_20";
+    const expectedLessonCount = isTargetMestre ? 20 : (isTargetSuper ? 6 : 3);
 
     if (existing && !forceDepth && existingLessonCount >= expectedLessonCount) {
       handleSelectLanguage(existing);
@@ -533,7 +583,9 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
 
       setActiveTab("lessons");
       triggerNotification(
-        isTargetSuper
+        isTargetMestre
+          ? `Parabéns! Grade curricular MESTRE (20 Lições completas) de ${libLang.name} gerada e salva com sucesso!`
+          : isTargetSuper
           ? `Parabéns! Grade curricular SUPER COMPLETA (6 Lições com dezenas de exemplos) de ${libLang.name} gerada e salva com sucesso!`
           : `Parabéns! Grade curricular padrão (3 Lições) de ${libLang.name} gerada e salva com sucesso!`,
         "success"
@@ -1275,37 +1327,50 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
                   </div>
                   
                   {/* Upgrade Language Section */}
-                  {selectedLanguage.lessons.length < 6 ? (
+                  {selectedLanguage.lessons.length < 20 && (
                     <div className="bg-gradient-to-r from-emerald-500/10 to-amber-500/10 border border-emerald-500/30 p-4 rounded-2xl space-y-2.5">
                       <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs">
                         <Sparkles size={14} className="text-amber-400 animate-pulse" />
                         <span>Upgrade de Aprendizado</span>
                       </div>
                       <p className="text-[11px] text-zinc-300 leading-relaxed">
-                        Esta linguagem está no modo básico (3 aulas). Expanda com IA para obter a grade **Super Completa (6 Aulas)** do básico ao super avançado com dezenas de exemplos de código e quizzes!
+                        Esta linguagem possui {selectedLanguage.lessons.length} aulas. Expanda para a grade definitiva de **Mestre da Linguagem (20 Lições)** para um domínio profundo de ponta a ponta!
                       </p>
-                      <button
-                        onClick={() => handleGenerateLanguage(selectedLanguage, "super_completa")}
-                        className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Sparkles size={13} /> Expandir para Grade Completa
-                      </button>
+                      
+                      <div className="space-y-2">
+                        {selectedLanguage.lessons.length < 6 && (
+                          <button
+                            onClick={() => handleGenerateLanguage(selectedLanguage, "super_completa")}
+                            className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-bold rounded-xl border border-zinc-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Sparkles size={12} /> Expandir para Grade Completa (6)
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleGenerateLanguage(selectedLanguage, "mestre_20")}
+                          className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Sparkles size={13} /> Expandir para Grade Mestre (20)
+                        </button>
+                      </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {selectedLanguage.lessons.length >= 20 && (
                     <div className="bg-zinc-900/60 border border-emerald-500/30 p-3.5 rounded-2xl flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <div className="bg-emerald-500/10 p-1.5 rounded-xl border border-emerald-500/25 text-emerald-400">
-                          <Trophy size={14} className="text-amber-400" />
+                          <Trophy size={14} className="text-amber-400 animate-pulse" />
                         </div>
                         <div>
                           <h4 className="text-xs font-bold text-zinc-100 flex items-center gap-1">
-                            Grade Super Completa 
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1 rounded-full">Ativa</span>
+                            Grade Mestre Ativa
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1 rounded-full animate-pulse">20 Lições</span>
                           </h4>
-                          <p className="text-[10px] text-zinc-400">Básico ao Super Avançado (6 Lições)</p>
+                          <p className="text-[10px] text-zinc-400">Domínio absoluto do início ao fim</p>
                         </div>
                       </div>
-                      <div className="text-[10px] text-zinc-500 font-mono">6 Aulas • 6 Quizzes</div>
+                      <div className="text-[10px] text-zinc-500 font-mono">20 Aulas • 10 Quizzes</div>
                     </div>
                   )}
 
@@ -1363,6 +1428,29 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
                       <article className="prose prose-invert max-w-none text-zinc-300">
                         <MarkdownRenderer content={selectedLesson.content} />
                       </article>
+
+                      {/* AI Tutor Extension Box */}
+                      <div className="mt-8 bg-gradient-to-r from-emerald-950/15 to-teal-950/15 border border-emerald-500/20 p-5 rounded-2xl flex flex-col md:flex-row items-center gap-4 justify-between">
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wide">
+                            <Sparkles size={12} className="animate-pulse" />
+                            Dúvidas ou quer aprofundar?
+                          </h4>
+                          <p className="text-xs text-zinc-300">
+                            Pergunte ao Professor IA do DevMestre sobre esta aula, peça mais exemplos ou tire suas dúvidas!
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            // Automatically switches to chat tab and sends a prompt
+                            setActiveTab("tutor");
+                            setChatInput(`Olá Professor! Estou estudando a lição "${selectedLesson.title}" de ${selectedLanguage.name} e gostaria de uma explicação ainda mais aprofundada, com outros exemplos práticos.`);
+                          }}
+                          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer whitespace-nowrap shrink-0"
+                        >
+                          <MessageSquare size={13} /> Conversar com Tutor IA
+                        </button>
+                      </div>
 
                       {/* Interactive Section: Pratique no Playground */}
                       {selectedLesson.initialCode && (
@@ -2193,26 +2281,36 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
                       Determine a quantidade de conteúdo, lições e quizzes que o DevMestre irá estruturar e salvar no catálogo do seu navegador.
                     </p>
                   </div>
-                  <div className="flex bg-zinc-950 border border-zinc-850 p-1 rounded-xl shrink-0">
+                  <div className="flex flex-wrap bg-zinc-950 border border-zinc-850 p-1 rounded-xl shrink-0 gap-1 md:gap-0">
                     <button
                       onClick={() => setGenerationDepth("padrao")}
-                      className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         generationDepth === "padrao"
                           ? "bg-zinc-800 text-zinc-200"
                           : "text-zinc-500 hover:text-zinc-300"
                       }`}
                     >
-                      Padrão (3 Lições)
+                      Padrão (3)
                     </button>
                     <button
                       onClick={() => setGenerationDepth("super_completa")}
-                      className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                         generationDepth === "super_completa"
+                          ? "bg-zinc-800 text-zinc-200"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
+                    >
+                      Completo (6)
+                    </button>
+                    <button
+                      onClick={() => setGenerationDepth("mestre_20")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                        generationDepth === "mestre_20"
                           ? "bg-emerald-500 text-zinc-950 shadow-md"
                           : "text-zinc-500 hover:text-zinc-300"
                       }`}
                     >
-                      Super Completo (6 Lições)
+                      <Sparkles size={11} /> Mestre (20)
                     </button>
                   </div>
                 </div>
@@ -2242,14 +2340,14 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
                   {/* Quick stats indicator */}
                   <div className="text-[11px] text-zinc-500">
                     Mostrando <strong className="text-zinc-300">
-                      {libraryLanguages.filter(lang => {
+                      {allCatalogueLanguages.filter(lang => {
                         const matchesSearch = lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           lang.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           lang.id.toLowerCase().includes(searchQuery.toLowerCase());
                         const matchesCategory = selectedCategory === "all" || lang.category === selectedCategory;
                         return matchesSearch && matchesCategory;
                       }).length}
-                    </strong> linguagens de <strong className="text-zinc-300">{libraryLanguages.length}</strong> no catálogo.
+                    </strong> linguagens de <strong className="text-zinc-300">{allCatalogueLanguages.length}</strong> no catálogo.
                   </div>
                 </div>
 
@@ -2283,7 +2381,7 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
 
               {/* Grid Catalog */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {libraryLanguages
+                {allCatalogueLanguages
                   .filter(lang => {
                     const matchesSearch = lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                       lang.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -2344,19 +2442,33 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
                             ) : (
                               <>
                                 <Sparkles size={12} />
-                                {generationDepth === "super_completa" ? "Criar Grade Super Completa" : "Criar Grade Curricular"}
+                                {generationDepth === "mestre_20"
+                                  ? "Criar Grade Mestre (20 Lições)"
+                                  : generationDepth === "super_completa"
+                                  ? "Criar Grade Super Completa"
+                                  : "Criar Grade Curricular"}
                               </>
                             )}
                           </button>
 
-                          {/* Upgrade Option if currently has 3 lessons and we want super_completa */}
+                          {/* Upgrade Options if currently active but has fewer lessons */}
                           {isAlreadyActive && (activeLanguages.find(l => l.id === lang.id)?.lessons?.length || 0) < 6 && (
                             <button
                               onClick={() => handleGenerateLanguage(lang, "super_completa")}
-                              className="w-full py-2 bg-gradient-to-r from-amber-500/10 to-emerald-500/10 hover:from-amber-500/20 hover:to-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-xl text-[10px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                              className="w-full py-2 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 hover:from-emerald-500/10 hover:to-teal-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-[10px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                             >
-                              <Sparkles size={10} className="text-amber-400 animate-pulse" />
+                              <Sparkles size={10} className="text-emerald-400 animate-pulse" />
                               Expandir para Grade Completa (6 Lições)
+                            </button>
+                          )}
+
+                          {isAlreadyActive && (activeLanguages.find(l => l.id === lang.id)?.lessons?.length || 0) < 20 && (
+                            <button
+                              onClick={() => handleGenerateLanguage(lang, "mestre_20")}
+                              className="w-full py-2 bg-gradient-to-r from-amber-500/10 to-emerald-500/10 hover:from-amber-500/20 hover:to-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-xl text-[10px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm animate-pulse"
+                            >
+                              <Sparkles size={10} className="text-amber-400" />
+                              Expandir para Grade Mestre (20 Lições)
                             </button>
                           )}
                         </div>
@@ -2366,7 +2478,7 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
               </div>
 
               {/* Empty state search result */}
-              {libraryLanguages.filter(lang => {
+              {allCatalogueLanguages.filter(lang => {
                 const matchesSearch = lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   lang.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                   lang.id.toLowerCase().includes(searchQuery.toLowerCase());

@@ -224,22 +224,24 @@ app.post("/api/tutor/generate-language-content", async (req, res) => {
 
     const ai = getGeminiClient();
     const isSuper = mode === "super_completa";
-    const numLessons = isSuper ? 6 : 3;
-    const numQuizzes = isSuper ? 6 : 3;
-    const numTemplates = isSuper ? 5 : 2;
+    const isMestre = mode === "mestre_20";
+    const numLessons = isMestre ? 20 : (isSuper ? 6 : 3);
+    const numQuizzes = isMestre ? 10 : (isSuper ? 6 : 3);
+    const numTemplates = isMestre ? 5 : (isSuper ? 5 : 2);
 
-    const prompt = `Gere um currículo super completo de aprendizado para a linguagem de programação "${languageName}" (${languageDescription || "Linguagem de desenvolvimento"}).
+    const prompt = `Gere um currículo super dinâmico e otimizado de aprendizado para a linguagem de programação "${languageName}" (${languageDescription || "Linguagem de desenvolvimento"}).
 Você deve fornecer exatamente:
-1. ${numLessons} lições estruturadas e progressivas: uma lição para cada nível desde o básico até o avançado. Cada lição deve conter teoria detalhada e profunda em português do Brasil formatada em Markdown com exemplos reais de código, e um código inicial prático para o usuário exercitar.
-${isSuper ? `As lições devem cobrir detalhadamente os seguintes tópicos estruturados:
-- Lição 1: Introdução, Conceito, Sintaxe Básica, Variáveis e Tipos de Dados primitivos e mutabilidade (iniciante). Deve conter múltiplos exemplos e trechos de código em Markdown.
-- Lição 2: Estruturas Condicionais, Controle de Fluxo e Loops/Laços de Repetição (iniciante). Deve conter múltiplos exemplos e trechos de código em Markdown.
-- Lição 3: Funções, Parâmetros, Escopo e Vetores/Arrays básicos (intermediario). Deve conter múltiplos exemplos e trechos de código em Markdown.
-- Lição 4: Paradigmas de Programação (Orientação a Objetos ou Programação Funcional etc. conforme o ecossistema da linguagem) e Coleções complexas (intermediario). Deve conter múltiplos exemplos e trechos de código em Markdown.
-- Lição 5: Conceito Avançado da linguagem, como Tratamento de Erros, Concorrência/Assincronismo, manipulação de streams ou gerenciamento de memória (avancado). Deve conter múltiplos exemplos e trechos de código em Markdown.
-- Lição 6: Recursos super avançados, como metaprogramação, boas práticas de produção, otimização, testes unitários ou padrões estruturais específicos da linguagem (super_avancado). Deve conter múltiplos exemplos e explicações aprofundadas em Markdown.` : `As lições devem cobrir nível iniciante (básico), intermediário (estruturas de controle/coleções) e avançado (recurso sofisticado).`}
-2. ${numQuizzes} perguntas de quiz divertidas e desafiadoras sobre a sintaxe, peculiaridades e recursos típicos desta linguagem.
-3. ${numTemplates} fôrmas ou templates de playground (exemplos práticos curtos e interessantes como Olá Mundo, algoritmos complexos de demonstração, coleções, classes ou concorrência/assincronismo).
+1. ${numLessons} lições estruturadas e progressivas: uma lição para cada nível desde o básico até o avançado. Cada lição deve conter teoria super objetiva, rápida e focada em português do Brasil formatada em Markdown com exemplos curtos de código, e um código inicial prático para o usuário exercitar.
+${isSuper ? `As lições devem cobrir detalhadamente os seguintes tópicos estruturados, com explicações objetivas e diretas (máximo 80 palavras de teoria por lição):
+- Lição 1: Introdução, Conceito, Sintaxe Básica, Variáveis e Tipos de Dados primitivos e mutabilidade (iniciante).
+- Lição 2: Estruturas Condicionais, Controle de Fluxo e Loops/Laços de Repetição (iniciante).
+- Lição 3: Funções, Parâmetros, Escopo e Vetores/Arrays básicos (intermediario).
+- Lição 4: Paradigmas de Programação (Orientação a Objetos ou Programação Funcional etc.) e Coleções complexas (intermediario).
+- Lição 5: Conceito Avançado da linguagem, como Tratamento de Erros, Concorrência/Assincronismo ou gerenciamento de memória (avancado).
+- Lição 6: Recursos super avançados, como metaprogramação, boas práticas, otimização ou testes (super_avancado).` : isMestre ? `Como o modo selecionado é "mestre_20", gere EXATAMENTE 20 lições que cubram a jornada inteira de ponta a ponta desde conceitos básicos (iniciante: lições 1 a 6), passando por tópicos intermediários estruturados (intermediário: lições 7 a 12), tópicos avançados (avançado: lições 13 a 17) e tópicos de nível mestre (super_avancado: lições 18 a 20).
+IMPORTANTE: Para evitar estouro de limite de tokens da API e erros de timeout, mantenha o campo 'content' (teoria) de cada uma das 20 lições extremamente resumido, objetivo e curto (de 40 a 75 palavras no máximo), focando puramente no conceito essencial e instruções para praticar no playground de forma ultra-focada.` : `As lições devem cobrir nível iniciante (básico), intermediário (estruturas de controle/coleções) e avançado (recursos sofisticados). Mantenha a teoria super concisa (máximo 60 palavras).`}
+2. ${numQuizzes} perguntas de quiz curtas e desafiadoras sobre a sintaxe, peculiaridades e recursos típicos desta linguagem. Mantenha as perguntas objetivas e o campo 'explanation' bem curto (máximo 30 palavras).
+3. ${numTemplates} templates de playground bem curtos e interessantes (ex: Olá Mundo, variáveis, loops, funções, classes, etc.).
 
 A resposta DEVE obedecer estritamente ao esquema de JSON abaixo e estar inteiramente em Português do Brasil.`;
 
@@ -259,7 +261,7 @@ A resposta DEVE obedecer estritamente ao esquema de JSON abaixo e estar inteiram
                 properties: {
                   id: { type: Type.STRING, description: "ID único legível (ex: rust-l1, rust-l2, rust-l3)." },
                   title: { type: Type.STRING, description: "Título atraente da lição incluindo numeração (ex: 1. Introdução à Sintaxe Rust)." },
-                  level: { type: Type.STRING, enum: ["iniciante", "intermediario", "avancado"], description: "Dificuldade." },
+                  level: { type: Type.STRING, enum: ["iniciante", "intermediario", "avancado", "super_avancado"], description: "Dificuldade." },
                   estimatedTime: { type: Type.STRING, description: "Tempo estimado (ex: 12 min)." },
                   content: { type: Type.STRING, description: "Conteúdo completo da lição em português contendo explicações detalhadas em Markdown e blocos de códigos." },
                   initialCode: { type: Type.STRING, description: "Código de partida completo com comentários explicativos para o usuário praticar." },
