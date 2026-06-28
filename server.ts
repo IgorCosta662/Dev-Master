@@ -57,10 +57,22 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
     temperature = 0.7,
   } = options;
 
-  const modelLower = selectedModel.toLowerCase();
-  const isGemini = modelLower.startsWith("gemini-") || modelLower.startsWith("tunedmodels/");
+  let resolvedModel = selectedModel;
+  const modelLowerInput = selectedModel.toLowerCase();
+  if (modelLowerInput === "gemini") {
+    resolvedModel = "gemini-2.5-flash";
+  } else if (modelLowerInput === "openai") {
+    resolvedModel = "gpt-4o-mini";
+  } else if (modelLowerInput === "deepseek") {
+    resolvedModel = "deepseek-chat";
+  } else if (modelLowerInput === "anthropic") {
+    resolvedModel = "claude-3-5-sonnet-latest";
+  }
+
+  const modelLower = resolvedModel.toLowerCase();
+  const isGemini = modelLower.startsWith("gemini") || modelLower.startsWith("tunedmodels/");
   const isOpenAI = modelLower.startsWith("gpt-") || modelLower.startsWith("o1-");
-  const isDeepSeek = modelLower.startsWith("deepseek-");
+  const isDeepSeek = modelLower.startsWith("deepseek-") || modelLower === "deepseek-chat";
   const isAnthropic = modelLower.startsWith("claude-");
 
   // Format single text prompt if any
@@ -75,7 +87,10 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
 
   // --- 1. GEMINI PROVIDER ---
   if (isGemini) {
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+    const apiKey = (customApiKey && customApiKey.trim() !== "" && customApiKey !== "undefined" && customApiKey !== "null")
+      ? customApiKey.trim()
+      : process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
       throw new Error("Chave de API (Gemini API Key) não configurada. Defina-a no menu de configurações.");
     }
@@ -116,7 +131,7 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
     }
 
     const response = await ai.models.generateContent({
-      model: selectedModel,
+      model: resolvedModel,
       contents,
       config,
     });
@@ -126,7 +141,10 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
 
   // --- 2. OPENAI PROVIDER ---
   if (isOpenAI) {
-    const apiKey = customApiKey || process.env.OPENAI_API_KEY;
+    const apiKey = (customApiKey && customApiKey.trim() !== "" && customApiKey !== "undefined" && customApiKey !== "null")
+      ? customApiKey.trim()
+      : process.env.OPENAI_API_KEY;
+
     if (!apiKey) {
       throw new Error("Chave de API da OpenAI não encontrada. Por favor, configure-a no menu de configurações.");
     }
@@ -152,7 +170,7 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: resolvedModel,
         messages,
         temperature,
         response_format: responseMimeType === "application/json" ? { type: "json_object" } : undefined,
@@ -170,7 +188,10 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
 
   // --- 3. DEEPSEEK PROVIDER ---
   if (isDeepSeek) {
-    const apiKey = customApiKey || process.env.DEEPSEEK_API_KEY;
+    const apiKey = (customApiKey && customApiKey.trim() !== "" && customApiKey !== "undefined" && customApiKey !== "null")
+      ? customApiKey.trim()
+      : process.env.DEEPSEEK_API_KEY;
+
     if (!apiKey) {
       throw new Error("Chave de API do DeepSeek não encontrada. Por favor, configure-a no menu de configurações.");
     }
@@ -196,7 +217,7 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: resolvedModel,
         messages,
         temperature,
         response_format: responseMimeType === "application/json" ? { type: "json_object" } : undefined,
@@ -214,7 +235,10 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
 
   // --- 4. ANTHROPIC PROVIDER ---
   if (isAnthropic) {
-    const apiKey = customApiKey || process.env.ANTHROPIC_API_KEY;
+    const apiKey = (customApiKey && customApiKey.trim() !== "" && customApiKey !== "undefined" && customApiKey !== "null")
+      ? customApiKey.trim()
+      : process.env.ANTHROPIC_API_KEY;
+
     if (!apiKey) {
       throw new Error("Chave de API da Anthropic não encontrada. Por favor, configure-a no menu de configurações.");
     }
@@ -238,7 +262,7 @@ async function executeAIRequest(options: AIRequestOptions): Promise<string> {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: selectedModel,
+        model: resolvedModel,
         system: systemInstruction || undefined,
         messages,
         max_tokens: 4096,

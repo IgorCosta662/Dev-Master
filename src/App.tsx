@@ -429,11 +429,26 @@ export default function App() {
   const [generationDepth, setGenerationDepth] = useState<"padrao" | "super_completa" | "mestre_20">("super_completa");
 
   // AI Keys & Selected Model State
-  const [selectedModel, setSelectedModel] = useState<string>(() => localStorage.getItem("selected_model") || "gemini");
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => localStorage.getItem("api_key_gemini") || "");
-  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => localStorage.getItem("api_key_openai") || "");
-  const [deepseekApiKey, setDeepseekApiKey] = useState<string>(() => localStorage.getItem("api_key_deepseek") || "");
-  const [anthropicApiKey, setAnthropicApiKey] = useState<string>(() => localStorage.getItem("api_key_anthropic") || "");
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    const val = localStorage.getItem("selected_model");
+    return (val && val !== "undefined" && val !== "null") ? val : "gemini";
+  });
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
+    const val = localStorage.getItem("api_key_gemini");
+    return (val && val !== "undefined" && val !== "null") ? val : "";
+  });
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => {
+    const val = localStorage.getItem("api_key_openai");
+    return (val && val !== "undefined" && val !== "null") ? val : "";
+  });
+  const [deepseekApiKey, setDeepseekApiKey] = useState<string>(() => {
+    const val = localStorage.getItem("api_key_deepseek");
+    return (val && val !== "undefined" && val !== "null") ? val : "";
+  });
+  const [anthropicApiKey, setAnthropicApiKey] = useState<string>(() => {
+    const val = localStorage.getItem("api_key_anthropic");
+    return (val && val !== "undefined" && val !== "null") ? val : "";
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const getActiveApiKey = () => {
