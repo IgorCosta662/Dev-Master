@@ -1,0 +1,6 @@
+{
+  "name": "Aprenda a Programar",
+  "description": "Uma plataforma interativa completa para aprender linguagens de programação com lições, playground de código, quizzes e tutor de inteligência artificial integrado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

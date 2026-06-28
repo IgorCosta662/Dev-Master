@@ -1,0 +1,343 @@
+import express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+
+// Lazy-loaded Gemini AI client to prevent startup crashes if key is missing
+let aiClient: GoogleGenAI | null = null;
+
+function getGeminiClient(): GoogleGenAI {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined. Please add it in the Secrets panel.");
+    }
+    aiClient = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
+  }
+  return aiClient;
+}
+
+// 1. API: Chat with AI Tutor
+app.post("/api/tutor/chat", async (req, res) => {
+  try {
+    const { message, history, language, lessonTitle } = req.body;
+    const ai = getGeminiClient();
+
+    const systemInstruction = `Você é o "DevMestre", um tutor de programação paciente, amigável, didático e altamente qualificado.
+Você está ajudando o usuário a aprender programação.
+O usuário está estudando a linguagem: ${language || "Geral"}.
+${lessonTitle ? `A lição atual é: "${lessonTitle}".` : ""}
+Seja objetivo, use Markdown para formatar suas respostas, e inclua pequenos exemplos de código explicativos sempre que relevante.
+Responda sempre em Português do Brasil de forma empática e encorajadora.`;
+
+    // Map history to the required format for gemini chat
+    // The format is: contents: [{ role: 'user' | 'model', parts: [{ text: '...' }] }]
+    const formattedContents = [
+      ...(history || []).map((msg: any) => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.text }],
+      })),
+      { role: "user", parts: [{ text: message }] },
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: formattedContents,
+      config: {
+        systemInstruction,
+        temperature: 0.7,
+      },
+    });
+
+    res.json({ text: response.text });
+  } catch (error: any) {
+    console.error("Erro no chat do tutor:", error);
+    res.status(500).json({ error: error.message || "Erro desconhecido ao chamar o Tutor de IA." });
+  }
+});
+
+// 2. API: Explain Code Line-by-Line
+app.post("/api/tutor/explain", async (req, res) => {
+  try {
+    const { code, language } = req.body;
+    if (!code) {
+      return res.status(400).json({ error: "Nenhum código fornecido para explicar." });
+    }
+
+    const ai = getGeminiClient();
+
+    const prompt = `Analise detalhadamente o seguinte código em ${language || "desconhecido"} e explique-o de forma clara e simples para iniciantes.
+Divida a explicação em partes lógicas ou comente linha por linha.
+Mostre quais são os conceitos fundamentais envolvidos (variáveis, loops, funções, etc.).
+
+Código:
+\`\`\`${language || ""}
+${code}
+\`\`\``;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "Você é um professor de programação brilhante que simplifica códigos complexos de forma didática e visual em Português.",
+        temperature: 0.3,
+      },
+    });
+
+    res.json({ text: response.text });
+  } catch (error: any) {
+    console.error("Erro ao explicar código:", error);
+    res.status(500).json({ error: error.message || "Erro ao gerar explicação do código." });
+  }
+});
+
+// 3. API: Debug and Fix Code
+app.post("/api/tutor/debug", async (req, res) => {
+  try {
+    const { code, language, errorMsg } = req.body;
+    if (!code) {
+      return res.status(400).json({ error: "Nenhum código fornecido para depuração." });
+    }
+
+    const ai = getGeminiClient();
+
+    const prompt = `O usuário está tendo problemas com o código a seguir na linguagem ${language || "desconhecida"}.
+${errorMsg ? `Mensagem de erro observada: ${errorMsg}` : "O código não está funcionando como esperado ou possui erros."}
+
+Código problemático:
+\`\`\`${language || ""}
+${code}
+\`\`\`
+
+Por favor:
+1. Identifique os erros ou pontos de melhoria no código.
+2. Explique por que o erro acontece em termos simples.
+3. Forneça o código corrigido completo dentro de um bloco de código markdown correspondente.
+4. Dê uma dica preventiva para evitar esse erro no futuro.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "Você é um engenheiro de software sênior e mentor de programação especialista em depuração e refatoração de código. Responda em Português do Brasil.",
+        temperature: 0.2,
+      },
+    });
+
+    res.json({ text: response.text });
+  } catch (error: any) {
+    console.error("Erro ao depurar código:", error);
+    res.status(500).json({ error: error.message || "Erro ao depurar o código fornecido." });
+  }
+});
+
+// 4. API: Generate Dynamic Coding Challenge (JSON schema response)
+app.post("/api/tutor/challenge", async (req, res) => {
+  try {
+    const { language, difficulty, topic } = req.body;
+    const ai = getGeminiClient();
+
+    const prompt = `Gere um desafio de programação criativo e realista na linguagem ${language || "JavaScript"}.
+Nível de dificuldade: ${difficulty || "Iniciante"}.
+Tópico/Tema desejado: ${topic || "Lógica Básica"}.
+
+A resposta DEVE obrigatoriamente preencher o esquema JSON fornecido, contendo:
+- title: O título atraente do desafio.
+- description: A descrição detalhada do desafio em português brasileiro, incluindo exemplos de entrada e saída.
+- starterCode: O código inicial estruturado de forma que o usuário tenha que completar (com comentários explicativos ou uma função vazia).
+- solutionTemplate: Uma sugestão de código de solução correta completa para quando o usuário desistir ou quiser conferir.
+- testCases: Um array com 2 ou 3 exemplos de casos de teste simples (input descritivo e expectedOutput descritivo em formato string).`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: {
+              type: Type.STRING,
+              description: "Título curto e claro do desafio.",
+            },
+            description: {
+              type: Type.STRING,
+              description: "Descrição detalhada do desafio e regras em português.",
+            },
+            starterCode: {
+              type: Type.STRING,
+              description: "Código esqueleto inicial para o usuário modificar.",
+            },
+            solutionTemplate: {
+              type: Type.STRING,
+              description: "Solução ideal completa para resolver o desafio.",
+            },
+            testCases: {
+              type: Type.ARRAY,
+              description: "Lista de casos de teste para o usuário validar seu raciocínio.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  input: { type: Type.STRING, description: "Valores ou caso de entrada." },
+                  expectedOutput: { type: Type.STRING, description: "Resultado esperado formatado em string." },
+                },
+                required: ["input", "expectedOutput"],
+              },
+            },
+          },
+          required: ["title", "description", "starterCode", "solutionTemplate", "testCases"],
+        },
+        temperature: 0.8,
+      },
+    });
+
+    const challengeData = JSON.parse(response.text.trim());
+    res.json(challengeData);
+  } catch (error: any) {
+    console.error("Erro ao gerar desafio:", error);
+    res.status(500).json({ error: error.message || "Erro ao gerar desafio dinâmico com IA." });
+  }
+});
+
+// 5. API: Dynamic Language Curriculum Generator (for supporting 100s of languages on the fly)
+app.post("/api/tutor/generate-language-content", async (req, res) => {
+  try {
+    const { languageId, languageName, languageDescription, mode } = req.body;
+    if (!languageName) {
+      return res.status(400).json({ error: "O nome da linguagem é obrigatório." });
+    }
+
+    const ai = getGeminiClient();
+    const isSuper = mode === "super_completa";
+    const numLessons = isSuper ? 6 : 3;
+    const numQuizzes = isSuper ? 6 : 3;
+    const numTemplates = isSuper ? 5 : 2;
+
+    const prompt = `Gere um currículo super completo de aprendizado para a linguagem de programação "${languageName}" (${languageDescription || "Linguagem de desenvolvimento"}).
+Você deve fornecer exatamente:
+1. ${numLessons} lições estruturadas e progressivas: uma lição para cada nível desde o básico até o avançado. Cada lição deve conter teoria detalhada e profunda em português do Brasil formatada em Markdown com exemplos reais de código, e um código inicial prático para o usuário exercitar.
+${isSuper ? `As lições devem cobrir detalhadamente os seguintes tópicos estruturados:
+- Lição 1: Introdução, Conceito, Sintaxe Básica, Variáveis e Tipos de Dados primitivos e mutabilidade (iniciante). Deve conter múltiplos exemplos e trechos de código em Markdown.
+- Lição 2: Estruturas Condicionais, Controle de Fluxo e Loops/Laços de Repetição (iniciante). Deve conter múltiplos exemplos e trechos de código em Markdown.
+- Lição 3: Funções, Parâmetros, Escopo e Vetores/Arrays básicos (intermediario). Deve conter múltiplos exemplos e trechos de código em Markdown.
+- Lição 4: Paradigmas de Programação (Orientação a Objetos ou Programação Funcional etc. conforme o ecossistema da linguagem) e Coleções complexas (intermediario). Deve conter múltiplos exemplos e trechos de código em Markdown.
+- Lição 5: Conceito Avançado da linguagem, como Tratamento de Erros, Concorrência/Assincronismo, manipulação de streams ou gerenciamento de memória (avancado). Deve conter múltiplos exemplos e trechos de código em Markdown.
+- Lição 6: Recursos super avançados, como metaprogramação, boas práticas de produção, otimização, testes unitários ou padrões estruturais específicos da linguagem (super_avancado). Deve conter múltiplos exemplos e explicações aprofundadas em Markdown.` : `As lições devem cobrir nível iniciante (básico), intermediário (estruturas de controle/coleções) e avançado (recurso sofisticado).`}
+2. ${numQuizzes} perguntas de quiz divertidas e desafiadoras sobre a sintaxe, peculiaridades e recursos típicos desta linguagem.
+3. ${numTemplates} fôrmas ou templates de playground (exemplos práticos curtos e interessantes como Olá Mundo, algoritmos complexos de demonstração, coleções, classes ou concorrência/assincronismo).
+
+A resposta DEVE obedecer estritamente ao esquema de JSON abaixo e estar inteiramente em Português do Brasil.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            lessons: {
+              type: Type.ARRAY,
+              description: `Lista com exatamente ${numLessons} lições progressivas da linguagem em português.`,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING, description: "ID único legível (ex: rust-l1, rust-l2, rust-l3)." },
+                  title: { type: Type.STRING, description: "Título atraente da lição incluindo numeração (ex: 1. Introdução à Sintaxe Rust)." },
+                  level: { type: Type.STRING, enum: ["iniciante", "intermediario", "avancado"], description: "Dificuldade." },
+                  estimatedTime: { type: Type.STRING, description: "Tempo estimado (ex: 12 min)." },
+                  content: { type: Type.STRING, description: "Conteúdo completo da lição em português contendo explicações detalhadas em Markdown e blocos de códigos." },
+                  initialCode: { type: Type.STRING, description: "Código de partida completo com comentários explicativos para o usuário praticar." },
+                  codeLanguage: { type: Type.STRING, description: "A identificação curta da linguagem para o realce de sintaxe (ex: rust, swift, clojure)." }
+                },
+                required: ["id", "title", "level", "estimatedTime", "content", "initialCode", "codeLanguage"]
+              }
+            },
+            quizzes: {
+              type: Type.ARRAY,
+              description: `Lista de exatamente ${numQuizzes} perguntas de quiz para testar os tópicos.`,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  id: { type: Type.STRING, description: "ID único (ex: rust-q1)." },
+                  question: { type: Type.STRING, description: "Pergunta clara e objetiva sobre a linguagem." },
+                  options: {
+                    type: Type.ARRAY,
+                    items: { type: Type.STRING },
+                    description: "Lista com exatamente 4 opções de resposta."
+                  },
+                  correctAnswerIndex: { type: Type.INTEGER, description: "Índice de 0 a 3 correspondente à alternativa correta." },
+                  explanation: { type: Type.STRING, description: "Explicação didática detalhada de por que essa opção está correta." }
+                },
+                required: ["id", "question", "options", "correctAnswerIndex", "explanation"]
+              }
+            },
+            templates: {
+              type: Type.ARRAY,
+              description: `Lista com exatamente ${numTemplates} templates iniciais práticos para o Playground.`,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  name: { type: Type.STRING, description: "Nome curto do template (ex: Olá, Mundo!, Estruturas Básicas)." },
+                  code: { type: Type.STRING, description: "Código fonte completo do template." },
+                  description: { type: Type.STRING, description: "Breve descrição do que este template demonstra." }
+                },
+                required: ["name", "code", "description"]
+              }
+            }
+          },
+          required: ["lessons", "quizzes", "templates"]
+        },
+        temperature: 0.6,
+      },
+    });
+
+    const generatedData = JSON.parse(response.text.trim());
+    res.json(generatedData);
+  } catch (error: any) {
+    console.error("Erro ao gerar currículo dinâmico:", error);
+    res.status(500).json({ error: error.message || "Erro de IA ao gerar currículo dinâmico de linguagem." });
+  }
+});
+
+// Configure Vite integration or static file serving
+async function startServer() {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Iniciando servidor em modo desenvolvimento com Vite Middleware...");
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    console.log("Iniciando servidor em modo produção...");
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Servidor rodando com sucesso em http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error("Falha ao iniciar o servidor de desenvolvimento:", err);
+});
