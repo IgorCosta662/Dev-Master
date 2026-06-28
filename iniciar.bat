@@ -51,4 +51,41 @@ echo Para encerrar o servidor, feche esta janela ou aperte Ctrl+C.
 echo --------------------------------------------------------
 call npm run dev
 
+if %errorlevel% neq 0 (
+    echo.
+    echo ========================================================
+    echo [AVISO] Ocorreu um erro ao iniciar o servidor de desenvolvimento!
+    echo.
+    echo Isso geralmente acontece se o projeto foi baixado como ZIP
+    echo e a pasta "node_modules" contém dependências compiladas para
+    echo outro sistema operacional (como Linux do container de nuvem)
+    echo ou se as dependências estão corrompidas.
+    echo ========================================================
+    echo.
+    set /p REINSTALL="Deseja remover as dependências antigas e reinstalá-las para o seu sistema? (S/N): "
+    if /i "%REINSTALL%"=="S" (
+        echo.
+        echo [INFO] Removendo pasta node_modules antiga...
+        if exist node_modules (
+            rmdir /s /q node_modules
+        )
+        echo [INFO] Removendo arquivos de lock antigos...
+        if exist package-lock.json (
+            del /f /q package-lock.json
+        )
+        echo [INFO] Instalando dependências limpas e compatíveis com seu sistema...
+        call npm install
+        if %errorlevel% neq 0 (
+            echo [ERRO] Falha na instalação das dependências. Por favor, verifique sua conexão ou se o Node.js está correto.
+            pause
+            exit /b
+        )
+        echo.
+        echo [INFO] Reinstalação concluída com sucesso!
+        echo [INFO] Iniciando o servidor de desenvolvimento novamente...
+        echo --------------------------------------------------------
+        call npm run dev
+    )
+)
+
 pause

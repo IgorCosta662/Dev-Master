@@ -428,6 +428,49 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [generationDepth, setGenerationDepth] = useState<"padrao" | "super_completa" | "mestre_20">("super_completa");
 
+  // AI Keys & Selected Model State
+  const [selectedModel, setSelectedModel] = useState<string>(() => localStorage.getItem("selected_model") || "gemini");
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => localStorage.getItem("api_key_gemini") || "");
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => localStorage.getItem("api_key_openai") || "");
+  const [deepseekApiKey, setDeepseekApiKey] = useState<string>(() => localStorage.getItem("api_key_deepseek") || "");
+  const [anthropicApiKey, setAnthropicApiKey] = useState<string>(() => localStorage.getItem("api_key_anthropic") || "");
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  const getActiveApiKey = () => {
+    switch (selectedModel) {
+      case "gemini":
+        return geminiApiKey;
+      case "openai":
+        return openaiApiKey;
+      case "deepseek":
+        return deepseekApiKey;
+      case "anthropic":
+        return anthropicApiKey;
+      default:
+        return "";
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem("selected_model", selectedModel);
+  }, [selectedModel]);
+
+  useEffect(() => {
+    localStorage.setItem("api_key_gemini", geminiApiKey);
+  }, [geminiApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem("api_key_openai", openaiApiKey);
+  }, [openaiApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem("api_key_deepseek", deepseekApiKey);
+  }, [deepseekApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem("api_key_anthropic", anthropicApiKey);
+  }, [anthropicApiKey]);
+
   // Load Saved Snippets & Progress on Mount
   useEffect(() => {
     const saved = localStorage.getItem("prog_snippets");
@@ -533,7 +576,9 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
           languageId: libLang.id,
           languageName: libLang.name,
           languageDescription: libLang.description,
-          mode: targetDepth
+          mode: targetDepth,
+          customApiKey: getActiveApiKey(),
+          selectedModel
         })
       });
 
@@ -819,7 +864,12 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
       const response = await fetch("/api/tutor/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: editorCode, language: selectedLanguage.name })
+        body: JSON.stringify({
+          code: editorCode,
+          language: selectedLanguage.name,
+          customApiKey: getActiveApiKey(),
+          selectedModel
+        })
       });
       const data = await response.json();
       if (response.ok) {
@@ -846,7 +896,9 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
         body: JSON.stringify({
           code: editorCode,
           language: selectedLanguage.name,
-          errorMsg: consoleOutput.includes("[Erro") ? consoleOutput : ""
+          errorMsg: consoleOutput.includes("[Erro") ? consoleOutput : "",
+          customApiKey: getActiveApiKey(),
+          selectedModel
         })
       });
       const data = await response.json();
@@ -875,7 +927,9 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
         body: JSON.stringify({
           language: selectedLanguage.name,
           difficulty: challengeDifficulty,
-          topic: topicName || challengeTopic || "Lógica de programação e manipulação básica"
+          topic: topicName || challengeTopic || "Lógica de programação e manipulação básica",
+          customApiKey: getActiveApiKey(),
+          selectedModel
         })
       });
       const data = await response.json();
@@ -1003,7 +1057,9 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
           message: userMsg.text,
           history: chatHistory,
           language: selectedLanguage.name,
-          lessonTitle: selectedLesson?.title
+          lessonTitle: selectedLesson?.title,
+          customApiKey: getActiveApiKey(),
+          selectedModel
         })
       });
 
@@ -1115,6 +1171,18 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
             <Compass size={14} />
             <span>Explorar Linguagens</span>
           </button>
+          
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            title="Configurar Chaves de API e Modelos IA"
+            className="p-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 rounded-xl transition-all flex items-center justify-center cursor-pointer relative"
+          >
+            <Settings size={16} />
+            {(geminiApiKey || openaiApiKey || deepseekApiKey || anthropicApiKey) && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            )}
+          </button>
+
           <div className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium flex items-center gap-1">
             <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
             Tutor Ativo
@@ -2522,6 +2590,166 @@ Como posso te ajudar na sua jornada de aprendizado hoje? Sinta-se à vontade par
             
             <div className="text-[10px] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 inline-block font-mono">
               Processando via Gemini 3.5... Pode levar até 15 segundos.
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Configuration Menu / AI Agents Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl">
+                  <Settings size={18} className="animate-spin-slow" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-100">Configuração de Modelos & IA</h3>
+                  <p className="text-[11px] text-zinc-400">Configure suas chaves de API e escolha o agente de IA tutor</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable Form */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              
+              {/* Select Model */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Agente de IA Tutor Ativo</label>
+                <div className="relative">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-200 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500/50 appearance-none cursor-pointer"
+                  >
+                    <option value="gemini">Google Gemini (Padrão)</option>
+                    <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                    <option value="deepseek">DeepSeek (V3 / R1)</option>
+                    <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+                  </select>
+                  <ChevronDown size={16} className="absolute right-4 top-4 text-zinc-400 pointer-events-none" />
+                </div>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  {selectedModel === "gemini" && "Utiliza o modelo oficial do Google Gemini. Se você não fornecer uma chave customizada, o sistema usará a chave global do servidor por padrão."}
+                  {selectedModel === "openai" && "Conecta-se diretamente à API da OpenAI. Requer uma chave válida com créditos de uso."}
+                  {selectedModel === "deepseek" && "Conecta-se à API oficial do DeepSeek (V3 ou R1) para gerar explicações ultra-detalhadas."}
+                  {selectedModel === "anthropic" && "Aproveita o raciocínio líder do Claude 3.5 Sonnet para orientar seus estudos."}
+                </p>
+              </div>
+
+              <div className="border-t border-zinc-800/60 pt-4 space-y-4">
+                <h4 className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-emerald-400" />
+                  Chaves de API Privadas (Salvas Localmente)
+                </h4>
+                
+                {/* Gemini Key */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[11px] text-zinc-400 font-medium">Chave Gemini API (Opcional)</label>
+                    {geminiApiKey && <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono">Configurada</span>}
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Chave do Google AI Studio (ou em branco para usar o padrão)"
+                    value={geminiApiKey}
+                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  />
+                </div>
+
+                {/* OpenAI Key */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[11px] text-zinc-400 font-medium">Chave OpenAI API</label>
+                    {openaiApiKey ? (
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono">Configurada</span>
+                    ) : (
+                      <span className="text-[9px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-mono">Requerida para OpenAI</span>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="sk-proj-..."
+                    value={openaiApiKey}
+                    onChange={(e) => setOpenaiApiKey(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  />
+                </div>
+
+                {/* DeepSeek Key */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[11px] text-zinc-400 font-medium">Chave DeepSeek API</label>
+                    {deepseekApiKey ? (
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono">Configurada</span>
+                    ) : (
+                      <span className="text-[9px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-mono">Requerida para DeepSeek</span>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="sk-..."
+                    value={deepseekApiKey}
+                    onChange={(e) => setDeepseekApiKey(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  />
+                </div>
+
+                {/* Anthropic Key */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[11px] text-zinc-400 font-medium">Chave Anthropic API</label>
+                    {anthropicApiKey ? (
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded font-mono">Configurada</span>
+                    ) : (
+                      <span className="text-[9px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded font-mono">Requerida para Anthropic</span>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="sk-ant-..."
+                    value={anthropicApiKey}
+                    onChange={(e) => setAnthropicApiKey(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer buttons */}
+            <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-950/40 flex justify-between gap-3">
+              <button
+                onClick={() => {
+                  setGeminiApiKey("");
+                  setOpenaiApiKey("");
+                  setDeepseekApiKey("");
+                  setAnthropicApiKey("");
+                  setSelectedModel("gemini");
+                  triggerNotification("Chaves e configurações redefinidas!", "success");
+                }}
+                className="px-3.5 py-2 text-xs font-semibold hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 rounded-xl border border-zinc-800 transition-all cursor-pointer"
+              >
+                Limpar Tudo
+              </button>
+              
+              <button
+                onClick={() => {
+                  setIsSettingsOpen(false);
+                  triggerNotification("Configurações salvas com sucesso!", "success");
+                }}
+                className="px-5 py-2 text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl shadow-md shadow-emerald-500/10 transition-all cursor-pointer"
+              >
+                Salvar & Fechar
+              </button>
             </div>
           </div>
         </div>
